@@ -1,0 +1,32 @@
+/* 14. Fallo de escritura I2C: pasa a no disponible. */
+void test_14_WriteTime_fallo_I2C_marca_no_disponible(void)
+{
+    DS3231_DateTime_t dt = {0};
+    uint8_t expected[3] = {0x45u, 0x30u, 0x15u};
+    dt.hour = 15u;
+    dt.minute = 30u;
+    dt.second = 45u;
+    dt.hourFormat = DS3231_FORMAT_24H;
+
+    i2cDeviceReady_ExpectAndReturn(DS3231_ADDR, true);
+    i2cMemWrite_ExpectWithArrayAndReturn(DS3231_ADDR, 0x00u,
+                                         expected, 3, 3u, false);
+
+    DS3231_WriteTime(&dt);
+    TEST_ASSERT_FALSE(DS3231_IsAvailable());
+    /* Una escritura fallida no debe provocar más llamadas I2C. */
+}
+
+/* 15. Fallo de lectura de temperatura: no disponible y false. */
+void test_15_GetTemperature_fallo_I2C(void)
+{
+    float temperature = 99.0f;
+
+    i2cDeviceReady_ExpectAndReturn(DS3231_ADDR, true);
+    i2cMemRead_ExpectAndReturn(DS3231_ADDR, 0x11u, NULL, 2u, false);
+    i2cMemRead_IgnoreArg_data();
+
+    TEST_ASSERT_FALSE(DS3231_GetTemperature(&temperature));
+    TEST_ASSERT_FALSE(DS3231_IsAvailable());
+    TEST_ASSERT_TRUE(temperature > 98.99f && temperature < 99.01f);
+}
